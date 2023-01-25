@@ -43,5 +43,5 @@ jobs:
           cd ArknightsName
           git push
         env:
-          version: ${{ setps.update.outputs.version}}
-        if: setps.update.outputs.update == 1
+          version: ${{ steps.update.outputs.version}}
+        if: steps.update.outputs.update == 1
