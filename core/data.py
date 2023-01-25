@@ -88,14 +88,14 @@ class Manager:
                 json.dump(data, f, ensure_ascii=False)
         if not update:
             print('nothing updated')
-            print('::set-output name=update::0')
+            os.system('"update=0" >> $GITHUB_ENV')
             return
-        print('::set-output name=update::1')
+        os.system('"update=1" >> $GITHUB_ENV')
 
         _hash = hashlib.md5(
             json.dumps(dict(sorted(all_data.items(), key=lambda x: str(x[0]))), ensure_ascii=False).encode(
                 'utf-8')).hexdigest()
-        print(f'::set-output name=version::{_hash[:8]}')
+        os.system(f'"version={_hash[:6]}" >> $GITHUB_ENV')
         print(f'update all {_hash}')
         with open(data_path % 'all', mode='wt', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False)
