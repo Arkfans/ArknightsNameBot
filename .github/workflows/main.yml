@@ -4,6 +4,8 @@ on:
   push:
   issue_comment:
     types: [created]
+  schedule:
+    - cron:  '30 0/1 * * *'
 
 jobs:
   build:
