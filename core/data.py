@@ -1,6 +1,7 @@
 import os
 import json
 import hashlib
+import subprocess
 from typing import Dict, List, Tuple, Set
 
 from .constance import types, data_path, version_path
@@ -88,14 +89,14 @@ class Manager:
                 json.dump(data, f, ensure_ascii=False)
         if not update:
             print('nothing updated')
-            os.system('"update=0" >> $GITHUB_ENV')
+            subprocess.run('"update=0" >> $GITHUB_ENV', shell=True)
             return
-        os.system('"update=1" >> $GITHUB_ENV')
+        subprocess.run('"update=1" >> $GITHUB_ENV', shell=True)
 
         _hash = hashlib.md5(
             json.dumps(dict(sorted(all_data.items(), key=lambda x: str(x[0]))), ensure_ascii=False).encode(
                 'utf-8')).hexdigest()
-        os.system(f'"version={_hash[:6]}" >> $GITHUB_ENV')
+        subprocess.run(f'"version={_hash[:6]}" >> $GITHUB_ENV', shell=True)
         print(f'update all {_hash}')
         with open(data_path % 'all', mode='wt', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False)
