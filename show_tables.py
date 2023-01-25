@@ -1,7 +1,7 @@
 from core.json import load_json
 from core.constance import data_path, table_path, types
 
-TEMPLATE = '''#%s
+TEMPLATE = '''# %s
 %s
 | id | 中文 | 英文 | 日文 |
 | --- | --- | --- | --- |
