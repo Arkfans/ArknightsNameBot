@@ -97,6 +97,8 @@ class Manager:
                 'utf-8')).hexdigest()
         os.system(f'echo "version={_hash[:6]}" >> $GITHUB_ENV')
         print(f'update all {_hash}')
+        with open(version_path % 'all', mode='wt', encoding='utf-8') as f:
+            f.write(_hash)
         with open(data_path % 'all', mode='wt', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False)
 
