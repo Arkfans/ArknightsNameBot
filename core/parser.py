@@ -20,7 +20,7 @@ class Parser:
                            if v['displaySkin']['skinName']}, 'SKIN')
         self.parse_by_key(skin_data['brandList'], 'BRAND', 'brandName')
         self.parse_by_key(load_json(enemy_path % self.lang), 'ENEMY')
-        self.parse_by_key(load_json(activate_path % self.lang)['basicInfo'], 'ACTIVATE')
+        self.parse_by_key(load_json(activate_path % self.lang)['basicInfo'], 'ACTIVITY')
         self.parse_by_key(load_json(team_path % self.lang), 'TEAM', 'powerName')
         self.parse_by_key(load_json(item_path % self.lang)['items'], 'ITEM')
         gacha_data = load_json(gacha_path % self.lang)

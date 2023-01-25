@@ -27,7 +27,7 @@ types = [
     'SKIN',
     'BRAND',
     'ENEMY',
-    'ACTIVATE',
+    'ACTIVITY',
     'TEAM',
     'ITEM',
     'TAG',
