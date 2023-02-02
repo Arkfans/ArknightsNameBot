@@ -86,10 +86,10 @@ class Manager:
                 f.write(_hash)
             with open(data_path % _type, mode='wt', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False)
-        # if not update:
-        #     print('nothing updated')
-        #     os.system('echo "update=0" >> $GITHUB_ENV')
-        #     return
+        if not update:
+            print('nothing updated')
+            os.system('echo "update=0" >> $GITHUB_ENV')
+            return
         os.system('echo "update=1" >> $GITHUB_ENV')
 
         _hash = hashlib.md5(
