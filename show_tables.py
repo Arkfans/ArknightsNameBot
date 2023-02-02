@@ -10,7 +10,7 @@ POOL_TEXT = '\n**各服务器卡池id并不相同，非简中服id已用`_`前�
             '[Kengxxiao/ArknightsGameData](https://github.com/Kengxxiao/ArknightsGameData)**  \n' \
             '常规轮换池以特殊ID `COMMON` 代替，不再展示重复数据\n'
 
-for _type in types + ['all']:
+for _type in types:
     name = _type.lower()
     data = load_json(data_path % name)
     with open(table_path % name, mode='wt', encoding='utf-8') as f:
@@ -19,3 +19,11 @@ for _type in types + ['all']:
             f'| {_id} | {langs.get("zh_CN", "-")} | {langs.get("en_US", "-")} | {langs.get("ja_JP", "-")} |'
             for _id, langs, in data.items()
         )))
+
+name = 'all'
+data = load_json(data_path % name)
+with open(table_path % name, mode='wt', encoding='utf-8') as f:
+    f.write(TEMPLATE % (name[0].upper() + name[1:], '', '\n'.join(
+        f'| {_id} | {d["names"].get("zh_CN", "-")} | {d["names"].get("en_US", "-")} | {d["names"].get("ja_JP", "-")} |'
+        for _id, d, in data.items()
+    )))
