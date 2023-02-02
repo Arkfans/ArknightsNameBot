@@ -72,9 +72,9 @@ class Manager:
         update = False
         all_data = {}
         for _type, type_manager in self._single.items():
-            _type = _type.lower()
             data = type_manager.data
-            all_data.update(data)
+            all_data.update({k: {'type': _type, 'names': v} for k, v in data.items()})
+            _type = _type.lower()
             _hash = hashlib.md5(json.dumps(data, ensure_ascii=False).encode('utf-8')).hexdigest()
             if os.path.exists(version_path % _type):
                 with open(version_path % _type, mode='rt', encoding='utf-8') as f:
