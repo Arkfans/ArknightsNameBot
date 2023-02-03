@@ -28,7 +28,7 @@ class Parser:
         self.parse_pool(gacha_data['gachaPoolClient'])
         self.parse_by_key({k: v['levels'][0] for k, v in load_json(skill_path % self.lang).items()}, 'SKILL')
         self.parse_by_key({k: v for k, v in load_json(stage_path % self.lang)['stages'].items()
-                           if not self.continue_stage_prefix.search(k)}, 'STAGE')
+                           if not self.continue_stage_prefix.search(k) and v['name']}, 'STAGE')
         self.parse_by_key({k: v for k, v in load_json(zone_path % self.lang)['zones'].items()
                            if v['zoneNameSecond']}, 'ZONE', 'zoneNameSecond')
 
