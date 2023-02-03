@@ -4,6 +4,8 @@ on:
   push:
   issue_comment:
     types: [created]
+  schedule:
+    - cron:  '30 0/1 * * *'
 
 jobs:
   build:
@@ -11,20 +13,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      
+
+      - name: Generate Token
+        id: token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_KEY }}
+          repository: Arkfans/ArknightsName
+
       - name: GetDataRepo
         uses: actions/checkout@v3
         with:
           repository: Arkfans/ArknightsName
           path: ArknightsName
-          token: ${{ secrets.PAT }}
-      
+          token: ${{ steps.token.outputs.token }}
+
       - name: GetGamedata
         uses: actions/checkout@v3
         with:
           repository: Kengxxiao/ArknightsGameData
           path: gamedata
-        
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
@@ -38,20 +48,20 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip wheel setuptools
           pip install aiohttp
-      
+
       - name: Update
         id: update
         run: |
           python update.py
           python show_tables.py
-      
+
       - name: Commit Changes
         run: |
           python commit.py
           cd ArknightsName
           git push
         env:
-          version: ${{ env.version }}
+          version: ${{ env.version}}
         if: env.update == 1
 
       - name: Update Alias
@@ -61,3 +71,4 @@ jobs:
         env:
           SERVER: ${{ secrets.ALIAS_SERVER }}
           KEY: ${{ secrets.ALIAS_KEY }}
+        if: env.update == 1
