@@ -52,6 +52,7 @@ jobs:
       - name: Update
         id: update
         run: |
+          source venv/bin/activate
           python update.py
           python show_tables.py
 
