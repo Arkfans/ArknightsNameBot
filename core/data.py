@@ -119,7 +119,7 @@ class Manager:
 
     def save_npc(self) -> Tuple[bool, str]:
         _type = 'npc'
-        data = {k: v.data for k, v in sorted(self._npc.items(), key=lambda x: x[0])}
+        data = {k: v.data for k, v in sorted(self._npc.items(), key=lambda x: x[0]) if v.names}
         _hash = hashlib.md5(json.dumps(data, ensure_ascii=False).encode('utf-8')).hexdigest()
         if os.path.exists(version_path % _type):
             with open(version_path % _type, mode='rt', encoding='utf-8') as f:
