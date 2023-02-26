@@ -3,6 +3,7 @@ import re
 from .json import *
 from .constance import *
 from .data import Manager
+from .story_parser import StoryParserManager
 
 
 class Parser:
@@ -31,6 +32,7 @@ class Parser:
                            if not self.continue_stage_prefix.search(k) and v['name']}, 'STAGE')
         self.parse_by_key({k: v for k, v in load_json(zone_path % self.lang)['zones'].items()
                            if v['zoneNameSecond']}, 'ZONE', 'zoneNameSecond')
+        StoryParserManager(self.lang, story_dir % self.lang).start()
 
     def parse_by_key(self, data: dict, _type: str, key: str = 'name'):
         try:

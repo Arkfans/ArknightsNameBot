@@ -34,14 +34,19 @@ class NPC:
 
     def __init__(self, _id: str):
         self.id: str = _id
-        self.names: List[Tuple[str, str]] = []
+        self.names: Dict[str, List[str]] = {}
         self.name_set: Set[str] = set()
 
     def add_name(self, lang: str, name: str):
-        if name in self.name_set:
-            return
-        self.names.append((lang, name))
-        self.name_set.add(name)
+        if lang in self.names:
+            if name not in self.names[lang]:
+                self.names[lang].append(name)
+        else:
+            self.names[lang] = [name]
+
+    @property
+    def data(self):
+        return dict(sorted({i[0]: sorted(i[1]) for i in self.names.items()}.items(), key=lambda x: x[0]))
 
     def __repr__(self):
         return f'[NPC:{self.id}:{self.names}]'
@@ -69,6 +74,17 @@ class Manager:
         return self._npc[_id]
 
     def save(self):
+        r1 = self.save_common()
+        r2 = self.save_npc()
+        if r1[0] or r2[0]:
+            _hash = hashlib.md5((r1[1] + r2[1]).encode('utf-8')).hexdigest()
+            os.system('echo "update=1" >> $GITHUB_ENV')
+            os.system(f'echo "version={_hash[:7]}" >> $GITHUB_ENV')
+        else:
+            print('nothing updated')
+            os.system('echo "update=0" >> $GITHUB_ENV')
+
+    def save_common(self) -> Tuple[bool, str]:
         update = False
         all_data = {}
         for _type, type_manager in self._single.items():
@@ -86,21 +102,37 @@ class Manager:
                 f.write(_hash)
             with open(data_path % _type, mode='wt', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False)
-        if not update:
-            print('nothing updated')
-            os.system('echo "update=0" >> $GITHUB_ENV')
-            return
-        os.system('echo "update=1" >> $GITHUB_ENV')
 
         _hash = hashlib.md5(
             json.dumps(dict(sorted(all_data.items(), key=lambda x: str(x[0]))), ensure_ascii=False).encode(
                 'utf-8')).hexdigest()
-        os.system(f'echo "version={_hash[:6]}" >> $GITHUB_ENV')
+        if not update:
+            return False, _hash
+
         print(f'update all {_hash}')
         with open(version_path % 'all', mode='wt', encoding='utf-8') as f:
             f.write(_hash)
         with open(data_path % 'all', mode='wt', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False)
+
+        return True, _hash
+
+    def save_npc(self) -> Tuple[bool, str]:
+        _type = 'npc'
+        data = {k: v.data for k, v in sorted(self._npc.items(), key=lambda x: x[0])}
+        _hash = hashlib.md5(json.dumps(data, ensure_ascii=False).encode('utf-8')).hexdigest()
+        if os.path.exists(version_path % _type):
+            with open(version_path % _type, mode='rt', encoding='utf-8') as f:
+                if f.read() == _hash:
+                    return False, _hash
+
+        print(f'update {_type} {_hash}')
+        with open(version_path % _type, mode='wt', encoding='utf-8') as f:
+            f.write(_hash)
+        with open(data_path % _type, mode='wt', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
+
+        return True, _hash
 
 
 Manager = Manager()
