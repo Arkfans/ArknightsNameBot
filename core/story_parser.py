@@ -25,6 +25,9 @@ IgnoreLino = {
 
 def check_char(char, name, mark):
     pass
+    if char == None:
+        print('!!!', char, name, mark)
+        exit()
     # if char == 'avg_npc_296_1' and name != '杜遥夜':
     #     print('!!!', char, name, mark)
     #     exit()
@@ -237,6 +240,7 @@ class StoryParser:
         if not _id:
             # 无效focus（或NPC未初始化
             self.curr_char = None
+            return
 
         self.curr_char = Manager.npc(_id)
 
