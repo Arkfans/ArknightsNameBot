@@ -1,287 +1,138 @@
 import os
-import re
-import asyncio
-import traceback
-from typing import List, Dict, Set, Tuple, Optional, Union
+import json
+import hashlib
+from typing import Dict, List, Tuple, Set
 
-import aiofiles
-
-from core.data import Manager, NPC
+from .constance import types, data_path, version_path
 
 
-class TypeHint:
-    Params = Dict[str, Union[str, int, float]]
+class Single:
+    """
+    单语种名字item，如 角色/敌人/材料
+    """
+
+    def __init__(self, _id: str, _type: str):
+        self.id: str = _id
+        self.type: str = _type
+        self.names: Dict[str, str] = {}
+
+    def add_name(self, lang: str, name: str):
+        self.names[lang] = name
+
+    def __repr__(self):
+        return f'[{self.type}:{self.id}:{self.names}]'
+
+    @property
+    def data(self):
+        return dict(sorted(self.names.items(), key=lambda x: x[0]))
 
 
-IgnoreLino = {
-    # 由于某些特殊文本并不遵从Character name对应原则，在此忽略
-    'level_main_06-12_end.txt': {305},
-    'level_main_04-10_end.txt': {130},
-    'level_main_03-05_end.txt': {41},
-    'level_st_06-03.txt': {421},
-    'level_main_04-02_beg.txt': {164}
-}
+class NPC:
+    """
+    单语种可能对应多名
+    """
 
+    def __init__(self, _id: str):
+        self.id: str = _id
+        self.names: Dict[str, List[str]] = {}
+        self.name_set: Set[str] = set()
 
-def check_char(char, name, mark):
-    pass
-    # if char == 'avg_npc_296_1' and name != '杜遥夜':
-    #     print('!!!', char, name, mark)
-    #     exit()
-
-
-class StoryParser:
-    def __init__(self, lang: str, path: str):
-        self.lang: str = lang
-        self.path: str = path
-        self.lino: int = 0
-        self.ignore: Set[int] = IgnoreLino.get(os.path.split(self.path)[-1], set())
-        self.curr_char: Optional[NPC] = None
-        # 是否处于图片播放，当处于图片播放，name与curr_char可能不对应
-        self.during_img: bool = False
-        # 是否处于完全遮罩(黑屏)，黑屏时，name与curr_char可能不对应
-        self.during_block: bool = False
-        self.default: dict = {
-            'fadetime': 0,
-            'duration': 0,
-            'x': 0,
-            'y': 0,
-            'a': 0,
-            'r': 0,
-            'g': 0,
-            'b': 0
-        }
-        self.COMMON_NAME = {
-            '？？？',
-            '???'
-        }
-        self.CHAR_SLOT_ALIAS = {
-            'left': 'l',
-            'middle': 'm',
-            'right': 'r',
-            'none': 'n'
-        }
-        self.char_slot_context = {}
-
-    @staticmethod
-    def remove_char_prefix(char: str):
-        if '#' in char:
-            char = char[:char.index('#')]
-        if '$' in char:
-            char = char[:char.index('$')]
-        return char
-
-    def close_context(self):
-        self.curr_char = None
-        self.char_slot_context.clear()
-
-    async def parse(self):
-        async with aiofiles.open(self.path, mode='rt', encoding='utf-8') as f:
-            async for line in f:
-                self.lino += 1
-                if self.lino in self.ignore:
-                    # 忽略非标准行
-                    continue
-                try:
-                    self.parse_line(line.strip())
-                except Exception:
-                    print(traceback.format_exc())
-                    print(self.path, self.lino, line)
-                    raise KeyboardInterrupt
-
-    def parse_line(self, text: str):
-        if text.startswith('['):
-            if text.endswith(']]'):
-                # ?
-                text = text[:-1]
-            if text.endswith(')]='):
-                # ?
-                text = text[:-1]
-            if text.endswith(')]'):
-                # 功能函数
-                self.parse_function(text)
-            elif text.startswith('[name'):
-                # 明确指向对话
-                self.parse_chat(text)
-            elif text.endswith(']'):
-                # 处理空函数
-                self.parse_empty_function(text)
-
-    def parse_chat(self, text: str):
-        if '"]' in text:
-            index = text.index('"]')
+    def add_name(self, lang: str, name: str):
+        if lang in self.names:
+            if name not in self.names[lang]:
+                self.names[lang].append(name)
         else:
-            index = text.index('",')
-        name = text[7:index].strip()
-        if name in self.COMMON_NAME:
-            return
-        # chat = text[index + 2:].strip()
-        if not self.curr_char:
-            return
-        if self.during_img or self.during_block:
-            return
+            self.names[lang] = [name]
 
-        check_char(self.curr_char.id, name, f'{self.path}:{self.lino}')
-        self.curr_char.add_name(self.lang, name)
+    @property
+    def data(self):
+        return dict(sorted({i[0]: sorted(i[1]) for i in self.names.items()}.items(), key=lambda x: x[0]))
 
-    def parse_function(self, text: str):
-        index = text.find('(')
-        # 忽略大小写 [自由の角]
-        _type = text[1:index].lower()
-        raw_params: List[Tuple[str, str]] = re.findall(r'(.+?)=(.*?), ?', text[index + 1:-2] + ',')
-        params: TypeHint.Params = {}
-        for key, value in raw_params:
-            key = key.strip()
-            value = value.strip()
-            if value == '':
-                params[key] = self.default[key]
-            elif value == 'true':
-                params[key] = True
-            elif value == 'false':
-                params[key] = False
-            elif value.startswith('"'):
-                params[key] = value.strip('"')
-            elif '.' in value:
-                params[key] = float(value)
-            else:
-                params[key] = int(value)
+    def __repr__(self):
+        return f'[NPC:{self.id}:{self.names}]'
 
-        if _type == 'character' or _type == 'charactercutin':
-            # CharacterCutin 裁分式插入，格式类似于Character
-            self.handle_character(params)
-        elif _type == 'charslot':
-            self.handle_charslot(params)
-        elif _type == 'image':
-            self.handle_image(params)
-        elif _type == 'predicate':
-            # 选项多分支
-            self.close_context()
-        elif _type == 'blocker':
-            self.handle_blocker(params)
 
-    def parse_empty_function(self, text: str):
-        _type = text[1:-1].lower()
-        if _type in [
-            'character',  # 取消focus
-            'dialog'  # 对话结束标识,
-        ]:
-            self.curr_char = None
-        elif _type == 'charslot':
-            # 清空slot上下文
-            self.close_context()
-        elif _type == 'image':
-            self.handle_image({'fadetime': 0})
+class TypeManager(dict):
+    @property
+    def data(self):
+        return {k: v.data for k, v in sorted(self.items(), key=lambda x: x[0])}
 
-    def handle_character(self, params: TypeHint.Params):
-        if 'name' not in params:
-            # e.g. fadetime=0 取消聚焦
-            self.curr_char = None
-            return
-        if params.get('focus') in [-1, 0]:
-            # 无效focus 取消聚焦
-            self.curr_char = None
-            return
 
-        if 'focus' in params and params['focus'] != 1:
-            key = 'name' + str(params['focus'])
-            if key not in params:
-                # 参见 gamedata/zh_CN/gamedata/story/obt/main\level_main_11-02_beg.txt
-                # focus=3 [自由の角]
-                return
-            char = params[key]
+class Manager:
+    def __init__(self):
+        self._single: Dict[str, Dict[str:Single]] = {i: TypeManager() for i in types}
+        self._npc: Dict[str, NPC] = {}
+
+    def single(self, _id: str, _type: str) -> Single:
+        if _id not in self._single[_type]:
+            self._single[_type][_id] = Single(_id, _type)
+        return self._single[_type][_id]
+
+    def npc(self, _id: str) -> NPC:
+        if _id not in self._npc:
+            self._npc[_id] = NPC(_id)
+        return self._npc[_id]
+
+    def save(self):
+        r1 = self.save_common()
+        r2 = self.save_npc()
+        if r1[0] or r2[0]:
+            _hash = hashlib.md5((r1[1] + r2[1]).encode('utf-8')).hexdigest()
+            os.system('echo "update=1" >> $GITHUB_ENV')
+            os.system(f'echo "version={_hash[:7]}" >> $GITHUB_ENV')
         else:
-            if 'name2' in params:
-                # 双focus e.g. 蓝毒&格劳克斯
-                self.curr_char = None
-                return
-            char = params['name']
+            print('nothing updated')
+            os.system('echo "update=0" >> $GITHUB_ENV')
 
-        char = self.remove_char_prefix(char)
+    def save_common(self) -> Tuple[bool, str]:
+        update = False
+        all_data = {}
+        for _type, type_manager in self._single.items():
+            data = type_manager.data
+            all_data.update({k: {'type': _type, 'names': v} for k, v in data.items()})
+            _type = _type.lower()
+            _hash = hashlib.md5(json.dumps(data, ensure_ascii=False).encode('utf-8')).hexdigest()
+            if os.path.exists(version_path % _type):
+                with open(version_path % _type, mode='rt', encoding='utf-8') as f:
+                    if f.read() == _hash:
+                        continue
+            update = True
+            print(f'update {_type} {_hash}')
+            with open(version_path % _type, mode='wt', encoding='utf-8') as f:
+                f.write(_hash)
+            with open(data_path % _type, mode='wt', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
 
-        if char == 'char_empty':
-            # 空角色
-            self.curr_char = None
-            return
+        _hash = hashlib.md5(
+            json.dumps(dict(sorted(all_data.items(), key=lambda x: str(x[0]))), ensure_ascii=False).encode(
+                'utf-8')).hexdigest()
+        if not update:
+            return False, _hash
 
-        self.curr_char = Manager.npc(char)
+        print(f'update all {_hash}')
+        with open(version_path % 'all', mode='wt', encoding='utf-8') as f:
+            f.write(_hash)
+        with open(data_path % 'all', mode='wt', encoding='utf-8') as f:
+            json.dump(all_data, f, ensure_ascii=False)
 
-    def handle_charslot(self, params: TypeHint.Params):
-        """
-        新的角色展示方式，替换了旧character
-        """
-        if params.get('focus') in ['none', 'n']:
-            # 取消聚焦
-            self.curr_char = None
-            return
-        if 'name' not in params or 'slot' not in params:
-            if 'name' not in params and 'slot' not in params:
-                self.close_context()
-            # 动效
-            return
+        return True, _hash
 
-        slot = self.CHAR_SLOT_ALIAS.get(params['slot'], params['slot'])
-        self.char_slot_context[slot] = self.remove_char_prefix(params['name'])
+    def save_npc(self) -> Tuple[bool, str]:
+        _type = 'npc'
+        data = {k: v.data for k, v in sorted(self._npc.items(), key=lambda x: x[0]) if v.names}
+        _hash = hashlib.md5(json.dumps(data, ensure_ascii=False).encode('utf-8')).hexdigest()
+        if os.path.exists(version_path % _type):
+            with open(version_path % _type, mode='rt', encoding='utf-8') as f:
+                if f.read() == _hash:
+                    return False, _hash
 
-        focus = params.get('focus')
-        if focus:
-            if ',' in focus:
-                # 多聚焦
-                self.curr_char = None
-                return
-            else:
-                focus = self.CHAR_SLOT_ALIAS.get(focus, focus)
-        else:
-            focus = slot
+        print(f'update {_type} {_hash}')
+        with open(version_path % _type, mode='wt', encoding='utf-8') as f:
+            f.write(_hash)
+        with open(data_path % _type, mode='wt', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
 
-        _id = self.char_slot_context.get(focus)
-        if not _id:
-            # 无效focus（或NPC未初始化
-            self.curr_char = None
-
-        self.curr_char = Manager.npc(_id)
-
-    def handle_image(self, params: TypeHint.Params):
-        if 'image' in params:
-            self.during_img = True
-        if len(params.keys()) == 1 and params.get('fadetime') == 0:
-            self.during_img = False
-
-    def handle_blocker(self, params: TypeHint.Params):
-        a = params.get('a', 0)
-        if a == 1:
-            self.during_block = True
-        elif a == 0:
-            self.during_block = False
+        return True, _hash
 
 
-class StoryParserManager:
-    def __init__(self, lang: str, base: str, task_num: int = 10):
-        self.base: str = base
-        self.lang: str = lang
-        self.task_num: int = task_num
-        self.target: List[str] = []
-        self.scan(base)
-
-    def scan(self, base: str):
-        files = os.listdir(base)
-        for file in files:
-            if file == '[uc]info':
-                continue
-            path = os.path.join(base, file)
-            if os.path.isdir(path):
-                self.scan(path)
-            elif path.endswith('.txt'):
-                self.target.append(path)
-
-    async def runner(self):
-        while self.target:
-            target = self.target.pop(0)
-            await StoryParser(self.lang, target).parse()
-
-    async def run(self):
-        await asyncio.gather(*[self.runner() for i in range(self.task_num)])
-
-    def start(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.run())
+Manager = Manager()
