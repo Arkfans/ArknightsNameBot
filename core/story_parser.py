@@ -25,9 +25,6 @@ IgnoreLino = {
 
 def check_char(char, name, mark):
     pass
-    if char == None:
-        print('!!!', char, name, mark)
-        exit()
     # if char == 'avg_npc_296_1' and name != '杜遥夜':
     #     print('!!!', char, name, mark)
     #     exit()
