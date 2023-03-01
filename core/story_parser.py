@@ -23,6 +23,13 @@ IgnoreLino = {
 }
 
 
+def check_char(char, name, mark):
+    pass
+    # if char == 'avg_npc_296_1' and name != '杜遥夜':
+    #     print('!!!', char, name, mark)
+    #     exit()
+
+
 class StoryParser:
     def __init__(self, lang: str, path: str):
         self.lang: str = lang
@@ -32,6 +39,8 @@ class StoryParser:
         self.curr_char: Optional[NPC] = None
         # 是否处于图片播放，当处于图片播放，name与curr_char可能不对应
         self.during_img: bool = False
+        # 是否处于完全遮罩(黑屏)，黑屏时，name与curr_char可能不对应
+        self.during_block: bool = False
         self.default: dict = {
             'fadetime': 0,
             'duration': 0,
@@ -46,6 +55,25 @@ class StoryParser:
             '？？？',
             '???'
         }
+        self.CHAR_SLOT_ALIAS = {
+            'left': 'l',
+            'middle': 'm',
+            'right': 'r',
+            'none': 'n'
+        }
+        self.char_slot_context = {}
+
+    @staticmethod
+    def remove_char_prefix(char: str):
+        if '#' in char:
+            char = char[:char.index('#')]
+        if '$' in char:
+            char = char[:char.index('$')]
+        return char
+
+    def close_context(self):
+        self.curr_char = None
+        self.char_slot_context.clear()
 
     async def parse(self):
         async with aiofiles.open(self.path, mode='rt', encoding='utf-8') as f:
@@ -90,9 +118,10 @@ class StoryParser:
         # chat = text[index + 2:].strip()
         if not self.curr_char:
             return
-        if self.during_img:
+        if self.during_img or self.during_block:
             return
 
+        check_char(self.curr_char.id, name, f'{self.path}:{self.lino}')
         self.curr_char.add_name(self.lang, name)
 
     def parse_function(self, text: str):
@@ -120,22 +149,26 @@ class StoryParser:
         if _type == 'character' or _type == 'charactercutin':
             # CharacterCutin 裁分式插入，格式类似于Character
             self.handle_character(params)
+        elif _type == 'charslot':
+            self.handle_charslot(params)
         elif _type == 'image':
             self.handle_image(params)
         elif _type == 'predicate':
             # 选项多分支
-            self.curr_char = None
+            self.close_context()
         elif _type == 'blocker':
-            # 遮罩，可能会遗漏部分名称（未发现实例）
-            self.curr_char = None
+            self.handle_blocker(params)
 
     def parse_empty_function(self, text: str):
         _type = text[1:-1].lower()
         if _type in [
             'character',  # 取消focus
-            'dialog'  # 对话结束标识
+            'dialog'  # 对话结束标识,
         ]:
             self.curr_char = None
+        elif _type == 'charslot':
+            # 清空slot上下文
+            self.close_context()
         elif _type == 'image':
             self.handle_image({'fadetime': 0})
 
@@ -163,10 +196,7 @@ class StoryParser:
                 return
             char = params['name']
 
-        if '#' in char:
-            char = char[:char.index('#')]
-        if '$' in char:
-            char = char[:char.index('$')]
+        char = self.remove_char_prefix(char)
 
         if char == 'char_empty':
             # 空角色
@@ -175,11 +205,52 @@ class StoryParser:
 
         self.curr_char = Manager.npc(char)
 
+    def handle_charslot(self, params: TypeHint.Params):
+        """
+        新的角色展示方式，替换了旧character
+        """
+        if params.get('focus') in ['none', 'n']:
+            # 取消聚焦
+            self.curr_char = None
+            return
+        if 'name' not in params or 'slot' not in params:
+            if 'name' not in params and 'slot' not in params:
+                self.close_context()
+            # 动效
+            return
+
+        slot = self.CHAR_SLOT_ALIAS.get(params['slot'], params['slot'])
+        self.char_slot_context[slot] = self.remove_char_prefix(params['name'])
+
+        focus = params.get('focus')
+        if focus:
+            if ',' in focus:
+                # 多聚焦
+                self.curr_char = None
+                return
+            else:
+                focus = self.CHAR_SLOT_ALIAS.get(focus, focus)
+        else:
+            focus = slot
+
+        _id = self.char_slot_context.get(focus)
+        if not _id:
+            # 无效focus（或NPC未初始化
+            self.curr_char = None
+
+        self.curr_char = Manager.npc(_id)
+
     def handle_image(self, params: TypeHint.Params):
         if 'image' in params:
             self.during_img = True
         if len(params.keys()) == 1 and params.get('fadetime') == 0:
             self.during_img = False
+
+    def handle_blocker(self, params: TypeHint.Params):
+        if params['a'] == 1:
+            self.during_block = True
+        elif params['a'] == 0:
+            self.during_block = False
 
 
 class StoryParserManager:
