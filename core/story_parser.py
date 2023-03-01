@@ -247,9 +247,10 @@ class StoryParser:
             self.during_img = False
 
     def handle_blocker(self, params: TypeHint.Params):
-        if params['a'] == 1:
+        a = params.get('a', 0)
+        if a == 1:
             self.during_block = True
-        elif params['a'] == 0:
+        elif a == 0:
             self.during_block = False
 
 
