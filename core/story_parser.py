@@ -19,13 +19,16 @@ IgnoreLino = {
     'level_main_04-10_end.txt': {130},
     'level_main_03-05_end.txt': {41},
     'level_st_06-03.txt': {421},
-    'level_main_04-02_beg.txt': {164}
+    'level_main_04-02_beg.txt': {164},
+    'story_fang_1_1.txt': {90},
+    'level_act19side_04_beg.txt': {665},
+    'level_act23side_08_end.txt': {70, 71}
 }
 
 
 def check_char(char, name, mark):
     pass
-    # if char == '' and name != '杜遥夜':
+    # if char == 'avg_225_haak_1' and (name == '强壮的男人' or name == '槐琥'):
     #     print('!!!', char, name, mark)
     #     exit()
 
@@ -131,7 +134,7 @@ class StoryParser:
         index = text.find('(')
         # 忽略大小写 [自由の角]
         _type = text[1:index].lower()
-        raw_params: List[Tuple[str, str]] = re.findall(r'(.+?)=(.*?), ?', text[index + 1:-2] + ',')
+        raw_params: List[Tuple[str, str]] = re.findall(r'(.+?)=((?:".*?")|.*?), ?', text[index + 1:-2] + ',')
         params: TypeHint.Params = {}
         for key, value in raw_params:
             key = key.strip()
@@ -219,14 +222,21 @@ class StoryParser:
             # 取消聚焦
             self.curr_char = None
             return
-        if 'name' not in params or 'slot' not in params:
+
+        if ('name' not in params or 'slot' not in params) and 'focus' not in params:
             if 'name' not in params and 'slot' not in params:
                 self.close_context()
+                return
             # 动效
+            self.curr_char = None
             return
 
-        slot = self.CHAR_SLOT_ALIAS.get(params['slot'], params['slot'])
-        self.char_slot_context[slot] = self.remove_char_prefix(params['name'])
+        slot = params.get('slot')
+        if slot:
+            slot = self.CHAR_SLOT_ALIAS.get(slot, slot)
+
+            if 'name' in params:
+                self.char_slot_context[slot] = self.remove_char_prefix(params['name'])
 
         focus = params.get('focus')
         if focus:
@@ -236,8 +246,10 @@ class StoryParser:
                 return
             else:
                 focus = self.CHAR_SLOT_ALIAS.get(focus, focus)
-        else:
+        elif slot:
             focus = slot
+        else:
+            return
 
         _id = self.char_slot_context.get(focus)
         if not _id:
