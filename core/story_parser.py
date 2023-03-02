@@ -25,7 +25,7 @@ IgnoreLino = {
 
 def check_char(char, name, mark):
     pass
-    # if char == 'avg_npc_296_1' and name != '杜遥夜':
+    # if char == '' and name != '杜遥夜':
     #     print('!!!', char, name, mark)
     #     exit()
 
@@ -60,6 +60,9 @@ class StoryParser:
             'middle': 'm',
             'right': 'r',
             'none': 'n'
+        }
+        self.variables = {
+            'ill_amiya_normal': 'char_002_amiya_1'
         }
         self.char_slot_context = {}
 
@@ -196,7 +199,10 @@ class StoryParser:
                 return
             char = params['name']
 
-        char = self.remove_char_prefix(char)
+        if char.startswith('$'):
+            char = self.variables[char.removeprefix('$')]
+        else:
+            char = self.remove_char_prefix(char)
 
         if char == 'char_empty':
             # 空角色
