@@ -23,13 +23,13 @@ IgnoreLino = {
     'story_fang_1_1.txt': {90},
     'level_act19side_04_beg.txt': {665},
     'level_act23side_08_end.txt': {70, 71},
-    'story_quercu_2_1.txt':{355}
+    'story_quercu_2_1.txt': {355}
 }
 
 
 def check_char(char, name, mark):
     pass
-    # if char == 'avg_377_gdglow_1' and (name == '夏栎'):
+    # if char == 'avg_388_mint_1' and (name == '焦急的研究者'):
     #     print('!!!', char, name, mark)
     #     exit()
 
@@ -194,6 +194,7 @@ class StoryParser:
             if key not in params:
                 # 参见 gamedata/zh_CN/gamedata/story/obt/main\level_main_11-02_beg.txt
                 # focus=3 [自由の角]
+                self.curr_char = None
                 return
             char = params[key]
         else:
