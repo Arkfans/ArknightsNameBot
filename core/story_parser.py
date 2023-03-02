@@ -22,13 +22,14 @@ IgnoreLino = {
     'level_main_04-02_beg.txt': {164},
     'story_fang_1_1.txt': {90},
     'level_act19side_04_beg.txt': {665},
-    'level_act23side_08_end.txt': {70, 71}
+    'level_act23side_08_end.txt': {70, 71},
+    'story_quercu_2_1.txt':{355}
 }
 
 
 def check_char(char, name, mark):
     pass
-    # if char == 'avg_225_haak_1' and (name == '强壮的男人' or name == '槐琥'):
+    # if char == 'avg_377_gdglow_1' and (name == '夏栎'):
     #     print('!!!', char, name, mark)
     #     exit()
 
@@ -233,7 +234,7 @@ class StoryParser:
 
         slot = params.get('slot')
         if slot:
-            slot = self.CHAR_SLOT_ALIAS.get(slot, slot)
+            slot = self.CHAR_SLOT_ALIAS.get(slot, slot).lower()
 
             if 'name' in params:
                 self.char_slot_context[slot] = self.remove_char_prefix(params['name'])
