@@ -53,7 +53,8 @@ class StoryParser:
             'a': 0,
             'r': 0,
             'g': 0,
-            'b': 0
+            'b': 0.,
+            'ypos': 0
         }
         self.COMMON_NAME = {
             '？？？',
